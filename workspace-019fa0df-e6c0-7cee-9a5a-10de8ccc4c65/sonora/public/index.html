@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#070510" />
+    <meta
+      name="description"
+      content="Sonora — AI-powered music discovery, player and sharing for music lovers. Real tracks from Apple Music, Deezer, Audius and Spotify."
+    />
+    <title>Sonora · AI Music</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;750;800;820&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23a855f7'/%3E%3Cstop offset='0.55' stop-color='%23ec4899'/%3E%3Cstop offset='1' stop-color='%23f59e0b'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Cpath d='M12 22V11l9-1.5v10' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='10.5' cy='22' r='2.6' fill='%23fff'/%3E%3Ccircle cx='19.5' cy='19.5' r='2.6' fill='%23fff'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <div class="aurora" aria-hidden="true"></div>
+    <div class="noise" aria-hidden="true"></div>
+
+    <div id="app"></div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <noscript>
+      <div style="padding: 40px; text-align: center; color: #fff; font-family: system-ui">
+        <h1>Sonora needs JavaScript</h1>
+        <p>Please enable JavaScript to use the player.</p>
+      </div>
+    </noscript>
+
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "sonora",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered music discovery, player and sharing app. Zero dependencies.",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "lan": "SONORA_BIND_ALL=1 node server.js",
+    "test": "bash test/e2e.sh",
+    "test:ui": "node test/ui.mjs"
+  },
+  "keywords": [
+    "music",
+    "ai",
+    "playlist",
+    "player",
+    "spotify",
+    "afrobeats"
+  ],
+  "license": "MIT"
+}

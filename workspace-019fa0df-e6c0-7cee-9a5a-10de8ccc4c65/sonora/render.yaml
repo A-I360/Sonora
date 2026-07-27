@@ -1,0 +1,28 @@
+# Render.com blueprint — https://render.com/docs/blueprint-spec
+# Deploy: push to GitHub, then New → Blueprint and point at this repo.
+services:
+  - type: web
+    name: sonora
+    runtime: node
+    plan: free
+    # No dependencies to install.
+    buildCommand: "echo 'no build step required'"
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Persist the database on the mounted disk below.
+      - key: SONORA_DATA_DIR
+        value: /var/data
+      # Optional — uncomment in the Render dashboard to enable:
+      # - key: OPENAI_API_KEY
+      #   sync: false
+      # - key: SPOTIFY_CLIENT_ID
+      #   sync: false
+      # - key: SPOTIFY_CLIENT_SECRET
+      #   sync: false
+    disk:
+      name: sonora-data
+      mountPath: /var/data
+      sizeGB: 1

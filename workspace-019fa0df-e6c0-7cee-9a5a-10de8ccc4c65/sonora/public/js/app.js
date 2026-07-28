@@ -307,16 +307,21 @@ window.addEventListener('sonora:user-changed', () => {
 function signOut() {
   clearQueue();
   store.set({ user: null, playlists: [], library: [], librarySet: new Set() });
-  location.hash = '';
   renderAuth(appRoot, { onAuthed: onSignedIn });
+  // Set hash AFTER the auth screen is in place to prevent the hashchange
+  // event from firing renderRoute() on the now-detached shell elements.
+  location.hash = '';
   toast('Signed out');
 }
 
 async function onSignedIn(user) {
   store.set({ user });
   await Promise.all([refreshPlaylists(), refreshLibrary(), loadProviders()]);
-  if (!location.hash) location.hash = '#/home';
   renderShell();
+  // Set the default hash AFTER the shell is in place so the hashchange
+  // event (which fires synchronously in some browsers) doesn't crash
+  // renderRoute() before sidebarSlot / mainEl exist.
+  if (!location.hash) location.hash = '#/home';
 }
 
 async function loadProviders() {

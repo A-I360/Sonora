@@ -72,7 +72,15 @@ export function playlistFormModal({ playlist = null, onDone }) {
 
 /* ---------------------------------------------------------- list view */
 
+/** @type {AbortController|null} */
+let _playlistsController = null;
+
 export function renderPlaylists(root, { navigate }) {
+  // Clean up any previous listener from a prior render (event listener leak prevention)
+  _playlistsController?.abort();
+  _playlistsController = new AbortController();
+  const { signal } = _playlistsController;
+
   let scope = 'mine';
   const grid = h('div');
 
@@ -155,7 +163,7 @@ export function renderPlaylists(root, { navigate }) {
   );
 
   load();
-  window.addEventListener('sonora:playlists-changed', load, { once: false });
+  window.addEventListener('sonora:playlists-changed', load, { signal });
 }
 
 /* -------------------------------------------------------- detail view */

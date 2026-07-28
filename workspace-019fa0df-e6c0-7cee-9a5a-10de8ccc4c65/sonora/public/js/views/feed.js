@@ -5,7 +5,15 @@ import { icon } from '../icons.js';
 import { avatar, emptyState, loadingRows } from '../components.js';
 import { playTrack } from '../player.js';
 
+/** @type {AbortController|null} */
+let _feedController = null;
+
 export function renderFeed(root, { navigate }) {
+  // Clean up any previous listener from a prior render (event listener leak prevention)
+  _feedController?.abort();
+  _feedController = new AbortController();
+  const { signal } = _feedController;
+
   let scope = 'all';
   const list = h('div', { class: 'feed' });
 
@@ -106,7 +114,7 @@ export function renderFeed(root, { navigate }) {
   );
 
   load();
-  window.addEventListener('sonora:shares-changed', load);
+  window.addEventListener('sonora:shares-changed', load, { signal });
 }
 
 /* ----------------------------------------------------------- post card */

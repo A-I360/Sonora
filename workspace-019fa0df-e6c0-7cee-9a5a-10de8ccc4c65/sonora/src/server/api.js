@@ -878,7 +878,7 @@ router.get('/api/providers/spotify/callback', async (req, res, ctx) => {
 <div style="text-align:center;max-width:420px">
 <h2>${code ? 'Spotify connected' : 'Spotify connection cancelled'}</h2>
 <p style="opacity:.7">${code ? 'You can close this window and return to Sonora.' : 'No authorization code was returned.'}</p>
-</div></body>`;
+</div></body></html>`;
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
   res.end(html);
 });

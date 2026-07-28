@@ -315,8 +315,11 @@ function signOut() {
 async function onSignedIn(user) {
   store.set({ user });
   await Promise.all([refreshPlaylists(), refreshLibrary(), loadProviders()]);
-  if (!location.hash) location.hash = '#/home';
   renderShell();
+  // Set the default hash AFTER the shell is in place so the hashchange
+  // event (which fires synchronously in some browsers) doesn't crash
+  // renderRoute() before sidebarSlot / mainEl exist.
+  if (!location.hash) location.hash = '#/home';
 }
 
 async function loadProviders() {

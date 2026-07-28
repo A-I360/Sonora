@@ -266,7 +266,10 @@ export function playQueue(tracks, startIndex = 0, { queueName = '' } = {}) {
     player.queue = shuffled(playable, idx);
     player.index = 0;
   } else {
-    player.queue = playable;
+    // Must copy the array so queue and originalQueue don't share a
+    // reference — addToQueue pushes to both, and with a shared reference
+    // the track would be added twice.
+    player.queue = [...playable];
     player.index = idx;
   }
   loadCurrent(true);
@@ -418,7 +421,7 @@ export function toggleShuffle() {
     player.index = 0;
   } else if (player.originalQueue.length) {
     const cur = player.current;
-    player.queue = player.originalQueue;
+    player.queue = [...player.originalQueue];
     player.index = Math.max(0, player.queue.findIndex((t) => t.id === cur?.id));
   }
   savePrefs();

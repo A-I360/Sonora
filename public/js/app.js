@@ -14,6 +14,7 @@ import { renderPlaylists, renderPlaylistDetail, playlistFormModal } from './view
 import { renderLibrary } from './views/library.js';
 import { renderFeed } from './views/feed.js';
 import { renderProfile } from './views/profile.js';
+import { renderSpotify } from './views/spotify.js';
 import { clearQueue } from './player.js';
 
 const appRoot = document.getElementById('app');
@@ -29,6 +30,7 @@ const ROUTES = {
   library: { render: renderLibrary, title: 'Library' },
   feed: { render: renderFeed, title: 'Community' },
   profile: { render: renderProfile, title: 'Profile' },
+  spotify: { render: renderSpotify, title: 'Spotify' },
 };
 
 function parseHash() {
@@ -62,6 +64,7 @@ const NAV_MAIN = [
 const NAV_LIB = [
   { key: 'library', label: 'Your library', icon: 'heart' },
   { key: 'playlists', label: 'Playlists', icon: 'listMusic' },
+  { key: 'spotify', label: 'Spotify', icon: 'spotify' },
 ];
 
 function renderSidebar(route) {
@@ -300,6 +303,9 @@ async function refreshLibrary() {
 window.addEventListener('sonora:playlists-changed', refreshPlaylists);
 window.addEventListener('sonora:user-changed', () => {
   if (sidebarSlot) mount(sidebarSlot, renderSidebar(parseHash()));
+});
+window.addEventListener('sonora:spotify-changed', () => {
+  // spotify view self-refreshes; nothing global to sync
 });
 
 /* ------------------------------------------------------------- auth */

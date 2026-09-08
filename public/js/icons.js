@@ -62,12 +62,18 @@ export const icons = {
   external: S('<path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>'),
   drag: S('<circle cx="9" cy="6" r="1.4" fill="currentColor"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><circle cx="9" cy="18" r="1.4" fill="currentColor"/><circle cx="15" cy="6" r="1.4" fill="currentColor"/><circle cx="15" cy="12" r="1.4" fill="currentColor"/><circle cx="15" cy="18" r="1.4" fill="currentColor"/>'),
   queue: S('<path d="M3 6h13M3 12h13M3 18h9"/><path d="M18 12v7M21.5 15.5h-7"/>'),
+  radio: S('<circle cx="12" cy="12" r="2"/><path d="M6.3 6.3a8 8 0 0011.4 0"/><path d="M3.5 3.5a12 12 0 0017 0"/><path d="M6.3 17.7a8 8 0 0011.4 0M3.5 20.5a12 12 0 0017 0"/>'),
   compass: S('<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>'),
   mail: S('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 6 10-6"/>'),
   lock: S('<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/>'),
   wave: S('<path d="M2 12h2M6 8v8M10 5v14M14 9v6M18 6v12M22 12h0"/>'),
   plusCircle: S('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'),
   trending: S('<path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>'),
+  spotify: S(
+    '<circle cx="12" cy="12" r="9"/><path d="M7 10.5c3.5-1 7-.8 9.5 1"/><path d="M7.5 13.5c2.8-.8 5.5-.6 7.5 1"/><path d="M8 16.3c2-.6 4-.5 5.5.7"/>', { fill: 'none', stroke: 'currentColor', w: 1.8 }
+  ),
+  download: S('<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>'),
+  cloudOff: S('<path d="M2 2l20 20"/><path d="M5.5 16a4 4 0 01-1-7.9 6 6 0 0111-3.4"/><path d="M16.5 12.8A4 4 0 0119 20H8"/>'),
 };
 
 export function icon(name, cls = '') {

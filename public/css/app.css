@@ -676,6 +676,19 @@ body {
   content: ''; position: absolute; bottom: 1px;
   width: 3px; height: 3px; border-radius: 50%; background: var(--accent-2);
 }
+/* Radio mode: a gentle broadcast glow so the endless-play state reads at a
+   glance, distinct from shuffle/repeat which just light up. */
+.ctrl.radio-mode.active {
+  color: var(--accent-3);
+  box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.35);
+  animation: radio-pulse 1.6s var(--ease) infinite;
+}
+@keyframes radio-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.35); }
+  70%  { box-shadow: 0 0 0 9px rgba(34, 211, 238, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+}
+.ctrl.radio-mode.active::after { background: var(--accent-3); }
 .ctrl-play {
   width: 42px; height: 42px;
   background: var(--accent-grad); color: #fff;
@@ -1034,6 +1047,35 @@ body {
 .prov-audius { background: #cc0fe0; }
 .prov-deezer { background: #a238ff; }
 .prov-spotify { background: #1db954; }
+.prov-demo { background: #f59e0b; }
+
+/* ====================================================  SPOTIFY  ======= */
+:root { --spotify: #1db954; }
+.spot-mark {
+  width: 56px; height: 56px; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(29,185,84,.95), rgba(25,140,60,.9));
+  display: grid; place-items: center; flex-shrink: 0;
+  box-shadow: 0 8px 26px rgba(29,185,84,.32);
+}
+.spot-mark-lg { width: 78px; height: 78px; border-radius: 20px; }
+.spot-mark svg { width: 26px; height: 26px; color: #fff; }
+.spot-mark-lg svg { width: 36px; height: 36px; }
+
+.spot-logo {
+  width: 62px; height: 62px; border-radius: 16px;
+  background: rgba(29,185,84,.14);
+  border: 1px solid rgba(29,185,84,.34);
+  display: grid; place-items: center;
+}
+.spot-logo svg { width: 30px; height: 30px; color: var(--spotify); }
+
+.spot-cover {
+  background: linear-gradient(135deg, #155e2e, #0f7a3a);
+}
+.spot-cover svg { width: 40px; height: 40px; color: #fff; opacity: .9; }
+.nav-item.active .spot-mark { box-shadow: none; }
+
+.badge-full { color: var(--success); }
 
 .tabs { display: flex; gap: 5px; padding: 4px; border-radius: 99px; background: var(--surface); border: 1px solid var(--stroke); width: fit-content; margin-bottom: 22px; flex-wrap: wrap; }
 .tab {

@@ -15,6 +15,8 @@ import {
   cycleRepeat,
   removeFromQueue,
   clearQueue,
+  toggleRadio,
+  startRadio,
 } from '../player.js';
 import { trackRow, isSaved, toggleSave, emptyState } from '../components.js';
 
@@ -50,6 +52,25 @@ export function renderPlayerBar() {
   const nextBtn = h('button', { class: 'ctrl', title: 'Next (Shift+→)', onclick: () => next() }, icon('next'));
   const repeatBtn = h('button', { class: 'ctrl', title: 'Repeat (R)', onclick: cycleRepeat }, icon('repeat'));
 
+  /* Radio toggle: if radio is already on, stop it; otherwise start endless
+     related-track playback from the current track (or the selected one).
+     Declared before the button so it's available when h() wires up the click
+     handler (a `const` referenced before init would throw a TDZ error). */
+  const onRadioClick = () => {
+    if (player.radio) {
+      toggleRadio();
+      toast('Radio off');
+      return;
+    }
+    if (player.current) {
+      startRadio(player.current);
+    } else {
+      toast('Play a track first to start the radio', 'info');
+    }
+  };
+
+  const radioBtn = h('button', { class: 'ctrl', title: 'Radio — endless related tracks', onclick: onRadioClick }, icon('radio'));
+
   const curTime = h('div', { class: 'time' }, '0:00');
   const endTime = h('div', { class: 'time right' }, '0:00');
   const fill = h('div', { class: 'scrub-fill', style: { width: '0%' } });
@@ -83,7 +104,7 @@ export function renderPlayerBar() {
   const center = h(
     'div',
     { class: 'player-center' },
-    h('div', { class: 'player-controls' }, shuffleBtn, prevBtn, playBtn, nextBtn, repeatBtn),
+    h('div', { class: 'player-controls' }, shuffleBtn, prevBtn, playBtn, nextBtn, repeatBtn, radioBtn),
     h('div', { class: 'progress-row' }, curTime, scrub, endTime)
   );
 
@@ -150,6 +171,9 @@ export function renderPlayerBar() {
     shuffleBtn.classList.toggle('active', p.shuffle);
     repeatBtn.classList.toggle('active', p.repeat !== 'off');
     repeatBtn.replaceChildren(icon(p.repeat === 'one' ? 'repeatOne' : 'repeat'));
+    radioBtn.classList.toggle('active', p.radio);
+    radioBtn.classList.add('radio-mode');
+    radioBtn.title = p.radio ? 'Radio on — tap to stop' : 'Radio — endless related tracks';
 
     const dur = p.duration || t?.durationMs || 0;
     const ratio = dur ? Math.min(1, p.progress / dur) : 0;

@@ -39,6 +39,7 @@ const TABLES = [
   'likes',
   'follows',
   'plays',
+  'downloads',
 ];
 
 function emptyState() {

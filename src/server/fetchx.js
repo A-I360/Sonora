@@ -54,6 +54,28 @@ async function fetchRaw(url, { method = 'GET', headers = {}, body, timeout = 900
   }
 }
 
+/** Fetch raw bytes (for audio downloads — res.text() would mangle binary). */
+async function fetchBuffer(url, opts = {}) {
+  const { timeout = 20000, headers = {} } = opts;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Sonora/1.0 (music discovery app)', ...headers },
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status} from ${new URL(url).host}`);
+      err.status = res.status;
+      throw err;
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    return buf;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchJson(url, opts = {}) {
   const { cacheKey, retries = 1 } = opts;
   const cached = cacheGet(cacheKey);
@@ -77,4 +99,4 @@ async function fetchJson(url, opts = {}) {
   throw lastErr;
 }
 
-module.exports = { fetchJson, fetchRaw };
+module.exports = { fetchJson, fetchRaw, fetchBuffer };

@@ -17,7 +17,7 @@ That's it. Node 18+ is the only requirement.
 
 | | |
 |---|---|
-| **Real catalog** | Millions of tracks via Apple Music (iTunes), Deezer and Audius. Real cover art, real audio — 30s previews plus **full-length** streams from Audius. |
+| **Real catalog** | Millions of tracks via Apple Music (iTunes), Deezer and Audius. Real cover art, real audio — 30s previews plus **full-length** streams from Audius. Plus a built-in, network-free **Sonora Sampler** catalog (generated cover art + audio) that always fills the grid even when the live APIs are unreachable. |
 | **AI playlists** | Type *"rainy night drive, moody afrobeats"* → get 20 scored, deduplicated, artist-diverse tracks with a title and description. |
 | **Auth** | Email + password, scrypt hashing, revocable server-side sessions in HttpOnly cookies. |
 | **CRUD** | Playlists (+ track membership + drag reorder), library, posts, comments, likes, profile — all with validation and ownership checks. |
@@ -39,20 +39,30 @@ Sonora's AI is **real and works with zero API keys**. It is not an LLM wrapper �
 
 ---
 
-## Spotify / Boomplay
+## Spotify connector — import & download playlists offline
 
-The provider registry is pluggable — `src/server/providers/` — and a **Spotify adapter is included and ready**. Add credentials to `.env` and it joins every search automatically:
+Sonora ships a **Spotify connector** (not just search). From the **Spotify** page in the sidebar (or *Profile → Spotify connector*) you can:
+
+1. **Connect** your Spotify account (real OAuth, or a simulated "demo" mode when no credentials are set).
+2. **Browse** your playlists.
+3. **Download an entire playlist** — Sonora fetches a playable source for every track and caches it on disk (`data/audio/`).
+4. **Listen offline** — cached tracks are served straight from disk via `/api/stream`, so playback works with no network connection.
 
 ```env
 SPOTIFY_CLIENT_ID=xxx
 SPOTIFY_CLIENT_SECRET=xxx
+SPOTIFY_REDIRECT_URI=https://your-host/api/spotify/callback
 ```
 
-Two things worth knowing before you do, because no app can work around them:
+- **Real mode** — set the three vars above (and expose the callback URL to Spotify). Connect uses the standard OAuth 2.0 authorization-code flow.
+- **Demo / simulated mode** — set `SPOTIFY_DEMO=1`, or leave the vars unset. Sonora simulates a connected Spotify account whose playlists come from the built-in Sonora Sampler catalog, so the whole connect → import → download → offline-playback flow is testable with zero network.
 
-- **Spotify deprecated `preview_url`** for new apps (Nov 2024). Its results are metadata-rich but usually silent. Sonora handles this: `POST /api/tracks/resolve` finds a matching playable source from the key-free providers so a Spotify row still makes sound.
-- **True in-app Spotify playback** requires the Web Playback SDK, user OAuth *and* a Premium account. The OAuth scaffold is in `providers/spotify.js` (`authorizeUrl` / `exchangeCode`).
-- **Boomplay has no public API.** Adding it means implementing `search()` + `lookup()` returning the normalized track shape and registering it — roughly 60 lines, same as `deezer.js`.
+Two things worth knowing, because no app can work around them:
+
+- **Spotify deprecated `preview_url`** for new apps (Nov 2024). Its search results are metadata-rich but usually silent — Sonora resolves a playable source from the key-free providers, and the downloader does the same when caching a playlist.
+- **True in-app Spotify *streaming*** requires the Web Playback SDK, user OAuth *and* a Premium account. Sonora's connector doesn't stream from Spotify's SDK; it downloads playable audio from the provider that actually has it and keeps it offline. The OAuth scaffold lives in `providers/spotify.js`.
+
+**Boomplay** has no public API. Adding it means implementing `search()` + `lookup()` returning the normalized track shape and registering it — roughly 60 lines, same as `deezer.js`.
 
 ---
 
@@ -66,7 +76,9 @@ src/server/
   auth.js                  scrypt hashing, sessions, ownership
   api.js                   all REST endpoints
   fetchx.js                fetch with timeout, retry, TTL cache
-  providers/               itunes · audius · deezer · spotify (pluggable)
+  providers/               itunes · audius · deezer · spotify · demo (pluggable, network-free sampler)
+  spotify.js               Spotify connector — user OAuth, playlist import, offline download
+  audioCache.js            disk cache for downloaded-for-offline audio (data/audio/)
   ai/
     lexicon.js             mood + genre → feature vectors and search queries
     features.js            5-D estimation, cosine/euclidean similarity
@@ -75,8 +87,8 @@ src/server/
 public/
   index.html  css/app.css
   js/  core.js · player.js · components.js · icons.js · app.js
-       views/  home · search · ai · playlists · library · feed · profile · player-bar
-data/                      db.json + wal.log (created on first run)
+       views/  home · search · ai · playlists · library · feed · profile · player-bar · spotify
+data/                      db.json + wal.log + audio/ (created on first run)
 ```
 
 **Zero dependencies** — no Express, no React, no bundler. `node_modules` is never needed, so the app can't rot.

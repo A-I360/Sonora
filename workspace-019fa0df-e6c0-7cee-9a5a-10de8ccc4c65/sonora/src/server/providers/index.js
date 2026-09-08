@@ -16,8 +16,9 @@ const itunes = require('./itunes');
 const audius = require('./audius');
 const deezer = require('./deezer');
 const spotify = require('./spotify');
+const demo = require('./demo');
 
-const REGISTRY = { itunes, audius, deezer, spotify };
+const REGISTRY = { itunes, audius, deezer, spotify, demo };
 
 function enabled() {
   return Object.values(REGISTRY).filter((p) => p.isEnabled());

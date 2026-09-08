@@ -21,6 +21,8 @@ export const player = {
   loading: false,
   shuffle: false,
   repeat: 'off', // off | all | one
+  radio: false, // endless similar-track auto-play
+  radioSeed: null,
   volume: 0.8,
   muted: false,
   progress: 0,
@@ -28,6 +30,13 @@ export const player = {
   buffered: 0,
   error: null,
 };
+
+// ids we've already pulled into a radio session, so the same track doesn't
+// come back around until the well runs dry.
+let radioPool = new Set();
+// Holds the in-flight refill promise (or null). Concurrent callers await the
+// same job so queue-advance never races an in-progress top-up.
+let radioBusy = null;
 
 /* -------------------------------------------------------- persist */
 
@@ -135,6 +144,18 @@ audio.addEventListener('ended', () => {
     audio.play().catch(() => {});
     return;
   }
+  // Endless radio: keep the feed topped up so we never dead-end. We only hit
+  // /api/ai/similar when the queue is running low (last 2 tracks), so a long
+  // queue doesn't cost us a fetch + toast per song. next() then advances into
+  // whatever we just appended.
+  if (player.radio) {
+    if (player.index >= player.queue.length - 2) {
+      refillRadio().then(() => next({ auto: true }));
+    } else {
+      next({ auto: true });
+    }
+    return;
+  }
   next({ auto: true });
 });
 /**
@@ -236,6 +257,111 @@ function updateMediaSession(track) {
   }
 }
 
+/* ------------------------------------------------------------ radio */
+
+/**
+ * Pull more similar tracks for the current/seed track and append them to the
+ * queue so playback continues indefinitely. Works offline: /api/ai/similar
+ * runs on the deterministic engine against the local catalog.
+ */
+async function refillRadio() {
+  if (!player.radio) return;
+  if (radioBusy) return radioBusy; // already topping up; join that job
+  // Seed on the *last played* track (the one currently buffering/just-ended),
+  // so the "similar" neighborhood drifts with what you actually hear instead of
+  // staying pinned to the very first track. Falls back to the session seed.
+  const seed = player.current || player.radioSeed;
+  if (!seed) return;
+  player.radioSeed = seed; // keep the session seed in sync with what we play
+
+  const job = (async () => {
+    try {
+      const { tracks } = await api.post('/api/ai/similar', { track: seed, limit: 20 });
+
+      // Radio may have been toggled off (or the queue cleared) while the
+      // request was in flight — don't mutate anything or toast in that case.
+      if (!player.radio) return;
+
+      // No repeats until the well runs dry: skip anything we've already pulled
+      // into this session's pool AND anything still queued.
+      let fresh = (tracks || [])
+        .filter(isPlayable)
+        .filter((t) => !radioPool.has(t.id) && !player.queue.some((q) => q.id === t.id))
+        .slice(0, 12);
+
+      if (!fresh.length) {
+        // The pool is exhausted — reset so we can cycle the neighborhood
+        // again. A short recency window (plus the current track) stops us
+        // re-queuing the track that just played or the wave before it, while
+        // letting older tracks return so radio truly loops, not dead-ends.
+        radioPool = new Set();
+        fresh = (tracks || [])
+          .filter(isPlayable)
+          .filter((t) => t.id !== player.current?.id && !player.queue.slice(-10).some((q) => q.id === t.id))
+          .slice(0, 12);
+        if (!fresh.length) {
+          // genuinely nothing new — stop rather than dead-end silently
+          player.radio = false;
+          player.radioSeed = null;
+          emit();
+          toast('Radio stopped — no more related tracks found', 'info');
+          return;
+        }
+      }
+
+      for (const t of fresh) radioPool.add(t.id);
+      player.queue.push(...fresh);
+      player.originalQueue.push(...fresh);
+      emit();
+      toast(`Radio: ${fresh.length} more like ${seed.title || 'this'}`, 'info', 1800);
+    } catch {
+      /* best effort — stop radio rather than loop on errors */
+      if (!player.radio) return; // user already turned it off; stay quiet
+      player.radio = false;
+      player.radioSeed = null;
+      emit();
+      toast('Radio stopped — could not find more tracks', 'info');
+    }
+  })();
+
+  radioBusy = job;
+  try {
+    return await job;
+  } finally {
+    radioBusy = null;
+  }
+}
+
+/** Turn endless radio on/off. When turning on, immediately top up the queue. */
+export function toggleRadio() {
+  player.radio = !player.radio;
+  if (player.radio && player.current) {
+    player.radioSeed = player.current;
+    radioPool = new Set([player.current.id]);
+    refillRadio();
+  }
+  emit();
+}
+
+/**
+ * Start playing a track and keep feeding from its "sound-a-likes".
+ * Sets up the radio session and seeds the queue after playQueue has run
+ * (playQueue intentionally clears radio for normal queues).
+ */
+export async function startRadio(track) {
+  if (!isPlayable(track)) {
+    toast(`"${track.title}" has no playable audio from this source`, 'error');
+    return;
+  }
+  // playQueue clears radio for normal queues, so arm the session *after* it.
+  playQueue([track], 0, { queueName: `Radio · ${track.artist}` });
+  player.radio = true;
+  player.radioSeed = track;
+  radioPool = new Set([track.id]);
+  // the first track is playing; pre-fill the next wave immediately
+  refillRadio();
+}
+
 /* ------------------------------------------------------------ api */
 
 function shuffled(list, keepFirst) {
@@ -260,6 +386,10 @@ export function playQueue(tracks, startIndex = 0, { queueName = '' } = {}) {
   let idx = playable.findIndex((t) => t.id === wanted?.id);
   if (idx === -1) idx = 0;
 
+  // A normal queue supersedes any radio session (callers opt back in via
+  // startRadio / toggleRadio).
+  player.radio = false;
+  player.radioSeed = null;
   player.originalQueue = playable;
   player.queueName = queueName;
   if (player.shuffle) {
@@ -476,6 +606,10 @@ export function clearQueue() {
   player.current = null;
   player.playing = false;
   player.progress = 0;
+  player.radio = false;
+  player.radioSeed = null;
+  radioPool = new Set();
+  radioBusy = null;
   emit();
 }
 

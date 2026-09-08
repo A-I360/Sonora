@@ -20,7 +20,7 @@ export function renderSearch(root, { navigate, query }) {
       'div',
       { class: 'page-head' },
       h('h1', { class: 'page-title' }, 'Search'),
-      h('p', { class: 'page-sub' }, 'One query, every connected catalog — Apple Music, Deezer, Audius and Spotify.')
+      h('p', { class: 'page-sub' }, 'One query, every connected catalog — Apple Music, Deezer, Audius, Spotify and the built-in Sonora Sampler.')
     ),
     filters,
     results

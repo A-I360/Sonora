@@ -18,6 +18,8 @@ loadEnv();
 const store = require('./src/server/store');
 const { router } = require('./src/server/api');
 const { send, HttpError } = require('./src/server/http');
+const demo = require('./src/server/providers/demo');
+const audioCache = require('./src/server/audioCache');
 
 const PORT = Number(process.env.PORT) || 3000;
 /**
@@ -138,6 +140,15 @@ function normalizeAudioMime(contentType, pathname = '') {
  * so seeking works.
  */
 async function proxyAudio(req, res, target) {
+  // Offline demo catalog: audio is generated locally and never hits the network,
+  // so handle it before the host allowlist (which only permits upstream CDNs).
+  if (target.startsWith('sonora://demo/')) {
+    return demo.serveAudio(req, res, target.slice('sonora://demo/'.length));
+  }
+  // Downloaded-for-offline audio: serve the cached copy straight from disk.
+  if (audioCache.has(target)) {
+    return audioCache.serve(req, res, target);
+  }
   let parsed;
   try {
     parsed = new URL(target);
@@ -213,6 +224,11 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/health') {
       return send(res, 200, { ok: true, uptime: process.uptime(), node: process.version });
+    }
+
+    // Offline demo catalog cover art (generated SVG, no external assets).
+    if (pathname.startsWith('/api/demo/art/')) {
+      return demo.serveArt(req, res, pathname.slice('/api/demo/art/'.length));
     }
 
     if (pathname.startsWith('/api/')) {

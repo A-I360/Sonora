@@ -153,6 +153,12 @@ async function exchangeCode(code) {
   return JSON.parse(res.body);
 }
 
+async function searchWithUser(authUser) {
+  // Reserved for user-scoped search via the Web Playback SDK. Not part of the
+  // registry contract — kept for future SDK integration.
+  throw new Error('User-scoped Spotify search requires the Web Playback SDK');
+}
+
 module.exports = {
   key,
   label,
@@ -164,4 +170,8 @@ module.exports = {
   normalize,
   authorizeUrl,
   exchangeCode,
+  clientId,
+  clientSecret,
+  redirectUri,
+  searchWithUser,
 };

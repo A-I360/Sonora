@@ -4,7 +4,7 @@
 
 import { h, api, store, toast, optimistic, fmtTime, initials, openModal, isPlayable } from './core.js';
 import { icon } from './icons.js';
-import { player, playTrack, addToQueue, onPlayerChange } from './player.js';
+import { player, playTrack, addToQueue, onPlayerChange, startRadio } from './player.js';
 
 /* ------------------------------------------------------- avatar */
 
@@ -119,7 +119,7 @@ export async function toggleSave(track, onUpdate) {
 
 /* ------------------------------------------------------ track row */
 
-const PROVIDER_LABEL = { itunes: 'Apple Music', audius: 'Audius', deezer: 'Deezer', spotify: 'Spotify' };
+const PROVIDER_LABEL = { itunes: 'Apple Music', audius: 'Audius', deezer: 'Deezer', spotify: 'Spotify', demo: 'Sonora Sampler' };
 
 export function trackRow(track, options = {}) {
   const {
@@ -222,6 +222,18 @@ export function trackRow(track, options = {}) {
           },
         },
         icon('plusCircle')
+      ),
+      h(
+        'button',
+        {
+          class: 'btn btn-icon',
+          title: 'Radio — play tracks like this',
+          onclick: (e) => {
+            e.stopPropagation();
+            startRadio(track);
+          },
+        },
+        icon('radio')
       ),
       h(
         'button',

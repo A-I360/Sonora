@@ -19,10 +19,27 @@ const providers = require('./providers');
 const engine = require('./ai/engine');
 const featuresLib = require('./ai/features');
 const llm = require('./ai/llm');
+const spotify = require('./spotify');
 
 const router = new Router();
 
 /* ------------------------------------------------------------ utilities */
+
+/** Client-side redirect (hash-friendly, no server host needed). */
+function redirectTo(res, hash) {
+  const safe = String(hash || '#/').replace(/"/g, '%22').replace(/</g, '%3C');
+  const html = `<!doctype html><meta charset="utf-8"><title>Redirecting…</title>
+<meta http-equiv="refresh" content="0;url=${safe}">
+<body style="font-family:system-ui;background:#0b0b14;color:#fff;display:grid;place-items:center;height:100vh;margin:0">
+<div style="text-align:center"><p>Returning to Sonora…</p></div></body>`;
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(html);
+}
+
+/** Router params are already decoded; keep an explicit decode for safety. */
+function ctxId(param) {
+  return String(param || '').trim();
+}
 
 /** Cache a catalog track locally so playlists survive provider downtime. */
 function cacheTrack(track) {
@@ -867,6 +884,130 @@ router.get('/api/stats', async (req, res) => {
       topArtists,
     },
   });
+});
+
+/* ---------------------------------------------------------- spotify */
+
+/** Connection status (which mode, who's connected). */
+router.get('/api/spotify', async (req, res) => {
+  const user = auth.currentUser(req);
+  send(res, 200, spotify.status(user?.id));
+});
+
+/** Start connecting. Real mode returns an authorizeUrl to redirect to. */
+router.get('/api/spotify/connect', async (req, res) => {
+  const user = auth.requireUser(req);
+  const result = await spotify.connectUser(user.id);
+  if (result.demo) {
+    send(res, 200, { ok: true, demo: true, user: result.user });
+  } else {
+    send(res, 200, { ok: true, demo: false, authorizeUrl: result.authorizeUrl });
+  }
+});
+
+/** OAuth callback: exchange the code, store the token, bounce to the app. */
+router.get('/api/spotify/callback', async (req, res, ctx) => {
+  const user = auth.currentUser(req);
+  const code = ctx.query.get('code');
+  const state = ctx.query.get('state');
+  if (!user) return redirectTo(res, '#/spotify?error=signin');
+  if (!code) return redirectTo(res, '#/spotify?error=cancelled');
+  try {
+    const result = await spotify.completeOAuth(user.id, code, state);
+    redirectTo(res, `#/spotify?connected=1&demo=${result.demo ? 1 : 0}`);
+  } catch (err) {
+    redirectTo(res, `#/spotify?error=${encodeURIComponent(err.message || 'failed')}`);
+  }
+});
+
+/** Disconnect Spotify (clears the stored token; downloads stay). */
+router.post('/api/spotify/disconnect', async (req, res) => {
+  const user = auth.requireUser(req);
+  spotify.clearToken(user.id);
+  send(res, 200, { ok: true, status: spotify.status(user.id) });
+});
+
+/** List the user's Spotify playlists. */
+router.get('/api/spotify/playlists', async (req, res) => {
+  const user = auth.requireUser(req);
+  const status = spotify.status(user.id);
+  if (!status.connected) throw new HttpError(409, 'Connect Spotify first');
+  try {
+    const playlists = await spotify.listPlaylists(user.id);
+    send(res, 200, { playlists, mode: status.mode, demo: status.demo });
+  } catch (err) {
+    throw new HttpError(502, err.message || 'Could not load your playlists');
+  }
+});
+
+/** One playlist + its tracks. */
+router.get('/api/spotify/playlists/:id', async (req, res, ctx) => {
+  const user = auth.requireUser(req);
+  const status = spotify.status(user.id);
+  if (!status.connected) throw new HttpError(409, 'Connect Spotify first');
+  const id = ctxId(ctx.params.id);
+  try {
+    const tracks = await spotify.playlistTracks(user.id, id);
+    send(res, 200, {
+      id,
+      tracks: tracks.map((t) => ({ ...t, downloaded: spotify.isDownloaded(user.id, t.id) })),
+      mode: status.mode,
+      demo: status.demo,
+    });
+  } catch (err) {
+    throw new HttpError(502, err.message || 'Could not load this playlist');
+  }
+});
+
+/** Download an entire playlist for offline listening. */
+router.post('/api/spotify/playlists/:id/download', async (req, res, ctx) => {
+  const user = auth.requireUser(req);
+  const status = spotify.status(user.id);
+  if (!status.connected) throw new HttpError(409, 'Connect Spotify first');
+  const id = ctxId(ctx.params.id);
+  const tracks = await spotify.playlistTracks(user.id, id);
+  if (!tracks.length) throw new HttpError(404, 'This playlist has no tracks');
+
+  // Resolve + cache each track, collecting a summary. Done in small batches so
+  // a big playlist doesn't stall a single request for too long.
+  const results = [];
+  for (const track of tracks) {
+    try {
+      const r = await spotify.resolveAndCache(user.id, track);
+      if (r.ok) {
+        spotify.markDownload(user.id, r.track, r.bytes || 0);
+        results.push({ id: r.track.id, title: r.track.title, ok: true });
+      } else {
+        results.push({ id: track.id, title: track.title, ok: false, reason: r.reason });
+      }
+    } catch (err) {
+      results.push({ id: track.id, title: track.title, ok: false, reason: err.message });
+    }
+  }
+
+  const okCount = results.filter((r) => r.ok).length;
+  send(res, 200, {
+    ok: true,
+    playlistId: id,
+    total: tracks.length,
+    downloaded: okCount,
+    failed: tracks.length - okCount,
+    results,
+  });
+});
+
+/** Offline library (downloaded tracks). */
+router.get('/api/spotify/downloads', async (req, res) => {
+  const user = auth.requireUser(req);
+  send(res, 200, { tracks: spotify.listDownloads(user.id), mode: spotify.status(user.id).mode });
+});
+
+/** Remove a single downloaded track. */
+router.delete('/api/spotify/downloads/:trackId', async (req, res, ctx) => {
+  const user = auth.requireUser(req);
+  const trackId = decodeURIComponent(ctx.params.trackId);
+  const removed = spotify.removeDownload(user.id, trackId);
+  send(res, 200, { ok: true, removed });
 });
 
 /* ------------------------------------------------------- spotify oauth */

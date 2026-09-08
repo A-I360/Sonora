@@ -165,6 +165,35 @@ export function renderProfile(root, { navigate, onSignedOut }) {
       h(
         'div',
         { class: 'section' },
+        sectionHead('Spotify connector'),
+        h(
+          'div',
+          { class: 'glass', style: { borderRadius: 'var(--radius)', padding: '16px' } },
+          h(
+            'div',
+            { class: 'flex items-center justify-between wrap gap-16' },
+            h(
+              'div',
+              { class: 'flex items-center gap-8' },
+              h('div', { class: 'spot-logo', style: { width: '34px', height: '34px' } }, icon('spotify', 'spot-icon')),
+              h('div', {},
+                h('strong', { style: { fontSize: '14px' } }, 'Spotify'),
+                h('div', { class: 'text-xs text-dim', style: { marginTop: '2px' } }, 'Import & download playlists for offline listening.')
+              )
+            ),
+            h(
+              'button',
+              { class: 'btn btn-sm', onclick: () => navigate('spotify') },
+              icon('spotify'),
+              'Open Spotify'
+            )
+          )
+        )
+      ),
+
+      h(
+        'div',
+        { class: 'section' },
         sectionHead('Danger zone'),
         h(
           'div',

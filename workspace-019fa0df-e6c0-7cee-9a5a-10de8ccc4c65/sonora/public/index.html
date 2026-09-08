@@ -10,12 +10,21 @@
     />
     <title>Sonora · AI Music</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Load Inter async so a slow/blocked fonts CDN never stalls first paint
+         (e.g. on sandboxed/air-gapped previews or a flaky phone connection).
+         The CSS falls back to the system font stack when it can't load. -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;750;800;820&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;750;800;820&display=swap"
+      />
+    </noscript>
     <link rel="stylesheet" href="/css/app.css" />
     <link
       rel="icon"

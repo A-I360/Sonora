@@ -6,7 +6,7 @@ Sonora has **zero dependencies** — no `npm install`, no build step. That makes
 
 ## 1. Run it on your own computer
 
-**Get the files onto your machine.** Download the `sonora` folder from this workspace (or `git clone` it if you've pushed it somewhere).
+**Get the files onto your machine.** Clone this repo (or download it). The project root **is** the app — `server.js`, `package.json`, `public/` and `src/` all live at the repository root, so no `cd` into a subfolder is needed.
 
 **Install Node.js** if you don't have it — [nodejs.org](https://nodejs.org) — version 18 or newer. Check with:
 
@@ -14,10 +14,9 @@ Sonora has **zero dependencies** — no `npm install`, no build step. That makes
 node -v
 ```
 
-**Start it:**
+**Start it** (from the repo root):
 
 ```bash
-cd sonora
 node server.js
 ```
 
@@ -30,7 +29,7 @@ You'll see:
      ai:      Deterministic engine (...)
 ```
 
-Open **http://localhost:3000**, create an account, and you're in. Data is saved to `sonora/data/`.
+Open **http://localhost:3000**, create an account, and you're in. Data is saved to `data/` in the repo (git-ignored).
 
 Stop it with `Ctrl+C`.
 

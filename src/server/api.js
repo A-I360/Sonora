@@ -947,10 +947,12 @@ router.get('/api/spotify/playlists/:id', async (req, res, ctx) => {
   if (!status.connected) throw new HttpError(409, 'Connect Spotify first');
   const id = ctxId(ctx.params.id);
   try {
-    const tracks = await spotify.playlistTracks(user.id, id);
+    const detail = await spotify.playlistDetail(user.id, id);
     send(res, 200, {
       id,
-      tracks: tracks.map((t) => ({ ...t, downloaded: spotify.isDownloaded(user.id, t.id) })),
+      name: detail.name,
+      description: detail.description,
+      tracks: detail.tracks.map((t) => ({ ...t, downloaded: spotify.isDownloaded(user.id, t.id) })),
       mode: status.mode,
       demo: status.demo,
     });
@@ -1013,6 +1015,11 @@ router.delete('/api/spotify/downloads/:trackId', async (req, res, ctx) => {
 /* ------------------------------------------------------- spotify oauth */
 
 router.get('/api/providers/spotify/callback', async (req, res, ctx) => {
+  const qs = ctx.url.searchParams.toString();
+  if (qs) {
+    res.writeHead(302, { Location: `/api/spotify/callback?${qs}` });
+    return res.end();
+  }
   const code = ctx.query.get('code');
   const html = `<!doctype html><meta charset="utf-8"><title>Spotify</title>
 <body style="font-family:system-ui;background:#0b0b14;color:#fff;display:grid;place-items:center;height:100vh;margin:0">

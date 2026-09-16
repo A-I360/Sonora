@@ -36,10 +36,7 @@ function isConfigured() {
 }
 
 function redirectUri() {
-  return (
-    process.env.SPOTIFY_REDIRECT_URI ||
-    `${process.env.PUBLIC_BASE_URL || 'http://127.0.0.1:3000'}/api/spotify/callback`
-  );
+  return spotifyProvider.redirectUri();
 }
 
 /* ------------------------------------------------------- token store */
@@ -47,15 +44,16 @@ function redirectUri() {
 function storeToken(userId, data) {
   const user = db.users.get(userId);
   if (!user) return;
+  const existing = user.spotify && user.spotify.mode === 'real' ? user.spotify : {};
   const spotify = {
     accessToken: data.access_token,
-    refreshToken: data.refresh_token || null,
+    refreshToken: data.refresh_token || existing.refreshToken || null,
     expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
-    id: data.id || data.spotify_id || null,
-    displayName: data.displayName || null,
-    email: data.email || null,
+    id: data.id || data.spotify_id || existing.id || null,
+    displayName: data.displayName || existing.displayName || null,
+    email: data.email || existing.email || null,
     mode: 'real',
-    connectedAt: new Date().toISOString(),
+    connectedAt: existing.connectedAt || new Date().toISOString(),
   };
   db.users.update(userId, { spotify });
   return spotify;
@@ -179,7 +177,7 @@ async function realToken(userId) {
         timeout: 9000,
       });
       const data = JSON.parse(res.body);
-      if (data.access_token) storeToken(userId, { ...data, id: s.id, displayName: s.displayName });
+      if (data.access_token) storeToken(userId, { ...data, id: s.id, displayName: s.displayName, email: s.email });
       return data.access_token || null;
     } catch {
       return null;
@@ -215,19 +213,45 @@ async function realListPlaylists(userId) {
   });
 }
 
-async function realPlaylistTracks(userId, playlistId) {
-  // fetch up to 100 tracks (single page is fine for most playlists)
-  const data = await realApi(userId, `/playlists/${encodeURIComponent(playlistId)}/tracks?limit=100`);
-  return (data.items || [])
+function demoPlaylistDetail(playlistId, userId) {
+  const meta = DEMO_PLAYLISTS.find((p) => p.id === playlistId);
+  const tracks = demoPlaylistTracks(playlistId, userId);
+  return {
+    id: playlistId,
+    name: meta?.name || playlistId,
+    description: meta?.description || '',
+    tracks,
+  };
+}
+
+async function realPlaylistDetail(userId, playlistId) {
+  const data = await realApi(userId, `/playlists/${encodeURIComponent(playlistId)}`);
+  const tracks = (data.tracks?.items || [])
     .map((it) => (it.track ? spotifyProvider.normalize(it.track) : null))
     .filter(Boolean);
+  return {
+    id: data.id || playlistId,
+    name: data.name || 'Spotify Playlist',
+    description: data.description || '',
+    tracks,
+  };
+}
+
+async function realPlaylistTracks(userId, playlistId) {
+  const detail = await realPlaylistDetail(userId, playlistId);
+  return detail.tracks;
 }
 
 /* ----------------------------------------------------- playlist fetch */
 
+async function playlistDetail(userId, playlistId) {
+  if (DEMO_MODE()) return demoPlaylistDetail(playlistId, userId);
+  return realPlaylistDetail(userId, playlistId);
+}
+
 async function playlistTracks(userId, playlistId) {
-  if (DEMO_MODE()) return demoPlaylistTracks(playlistId, userId);
-  return realPlaylistTracks(userId, playlistId);
+  const detail = await playlistDetail(userId, playlistId);
+  return detail.tracks;
 }
 
 async function listPlaylists(userId) {
@@ -357,6 +381,21 @@ async function connectUser(userId) {
 async function completeOAuth(userId, code, state) {
   if (DEMO_MODE()) return connectUser(userId);
   if (!code) throw new Error('No authorization code returned');
+
+  // Verify and clean up OAuth CSRF state if provided
+  if (state && pendingStates.has(state)) {
+    const entry = pendingStates.get(state);
+    pendingStates.delete(state);
+    if (entry && entry.userId !== userId) {
+      throw new Error('OAuth state mismatch: account verification failed');
+    }
+  }
+  // Clean up any stale states (> 15 min)
+  const now = Date.now();
+  for (const [st, val] of pendingStates.entries()) {
+    if (now - val.at > 15 * 60 * 1000) pendingStates.delete(st);
+  }
+
   const data = await spotifyProvider.exchangeCode(code);
   if (!data.access_token) throw new Error(data.error_description || 'Spotify token exchange failed');
   // look up the account identity so we can show who's connected
@@ -387,6 +426,7 @@ module.exports = {
   completeOAuth,
   listPlaylists,
   playlistTracks,
+  playlistDetail,
   listDownloads,
   removeDownload,
   markDownload,

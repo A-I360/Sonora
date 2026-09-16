@@ -175,8 +175,19 @@ export function trackRow(track, options = {}) {
       class: 'track-row',
       dataset: { trackId: track.id },
       draggable: draggable ? 'true' : null,
-      onclick: () => {
+      onclick: async () => {
         if (!playable) {
+          try {
+            toast(`Finding audio for "${track.title}"…`, 'info', 2000);
+            const { track: resolved, changed } = await api.post('/api/tracks/resolve', { track });
+            if (changed && (resolved.streamUrl || resolved.previewUrl)) {
+              toast(`Found audio via ${PROVIDER_LABEL[resolved.resolvedFrom] || resolved.resolvedFrom}`, 'success', 2000);
+              playTrack(resolved, context, { queueName: contextName });
+              return;
+            }
+          } catch {
+            /* ignore */
+          }
           toast(`No audio available for "${track.title}" from ${PROVIDER_LABEL[track.provider] || track.provider}`, 'error');
           return;
         }

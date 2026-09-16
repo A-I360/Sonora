@@ -24,6 +24,9 @@ function StatusCard(status, onChanged) {
     ? `Connected${demo ? ' in simulated mode' : ''}${status.user ? ` as ${status.user.displayName}` : ''}.`
     : 'Connect Spotify to import your playlists and download them for offline listening.';
   const note = h('p', { class: 'text-sm text-dim', style: { marginTop: '8px', lineHeight: '1.55' } }, status.note || '');
+  const redirectInfo = (!demo && !connected && status.redirectUri)
+    ? h('p', { class: 'text-xs text-dim', style: { marginTop: '6px', fontFamily: 'monospace', wordBreak: 'break-all' } }, `Spotify callback URL: ${status.redirectUri}`)
+    : null;
 
   const action = connected
     ? h(
@@ -90,7 +93,8 @@ function StatusCard(status, onChanged) {
         h('div', { style: { fontSize: '17px', fontWeight: '700', marginBottom: '3px' } }, 'Spotify'),
         h('div', { class: 'flex items-center gap-8' }, h('span', { class: `badge ${connected ? 'badge-full' : 'badge-private'}` }, connected ? 'Connected' : 'Not connected'), demo ? h('span', { class: 'badge badge-ai' }, 'Demo mode') : null),
         desc,
-        note
+        note,
+        redirectInfo
       ),
       h(
         'div',
@@ -242,7 +246,7 @@ function PlaylistDetail({ id, onBack }) {
                   toast(`Downloaded ${r.downloaded} track${r.downloaded === 1 ? '' : 's'}${r.failed ? ` · ${r.failed} failed` : ''}`, r.failed ? 'info' : 'success');
                   const d = await api.get('/api/spotify/playlists/' + encodeURIComponent(id));
                   tracks = d.tracks;
-                  meta = { ...meta, mode: d.mode };
+                  meta = { ...meta, name: d.name || meta.name, description: d.description || meta.description, mode: d.mode };
                   paint();
                   window.dispatchEvent(new CustomEvent('sonora:spotify-changed'));
                 } catch (err) {
@@ -282,7 +286,7 @@ function PlaylistDetail({ id, onBack }) {
     .get(`/api/spotify/playlists/${encodeURIComponent(id)}`)
     .then((d) => {
       tracks = d.tracks;
-      meta = { name: id, mode: d.mode, demo: d.demo };
+      meta = { name: d.name || id, description: d.description || '', mode: d.mode, demo: d.demo };
       paint();
     })
     .catch((err) => mount(slot, emptyState({ iconName: 'x', title: 'Could not load playlist', text: err.message, action: h('button', { class: 'btn btn-primary', onclick: onBack }, 'Back') })));
@@ -292,9 +296,22 @@ function PlaylistDetail({ id, onBack }) {
 
 /* --------------------------------------------------------------- view */
 
-export function renderSpotify(root, { params }) {
+export function renderSpotify(root, { params = {} } = {}) {
+  // Handle OAuth callback status from redirect
+  if (params?.connected === '1') {
+    toast(params.demo === '1' ? 'Connected in simulated mode' : 'Spotify connected successfully!', 'success');
+    try {
+      history.replaceState(null, '', '#/spotify');
+    } catch {}
+  } else if (params?.error) {
+    toast(`Spotify connection failed: ${params.error}`, 'error');
+    try {
+      history.replaceState(null, '', '#/spotify');
+    } catch {}
+  }
+
   // allow deep-link: /spotify/pl_xyz
-  if (params.id) {
+  if (params?.id) {
     mount(root, PlaylistDetail({ id: params.id, onBack: () => { window.location.hash = '#/spotify'; } }));
     return;
   }

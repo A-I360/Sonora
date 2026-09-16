@@ -33,7 +33,10 @@ function clientSecret() {
   return process.env.SPOTIFY_CLIENT_SECRET || '';
 }
 function redirectUri() {
-  return process.env.SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:3000/api/providers/spotify/callback';
+  return (
+    process.env.SPOTIFY_REDIRECT_URI ||
+    `${(process.env.PUBLIC_BASE_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '')}/api/spotify/callback`
+  );
 }
 
 function isEnabled() {

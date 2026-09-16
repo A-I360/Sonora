@@ -123,6 +123,26 @@ chk "update profile" "$r" 'Renamed User'
 r=$(curl -s -b $CK2 -X PATCH $B/api/me -H 'Content-Type: application/json' -d '{"handle":"e2etester"}')
 chk "duplicate handle rejected" "$r" 'taken'
 
+echo "== SPOTIFY =="
+r=$(curl -s -b $CK $B/api/spotify)
+chk "spotify initial status" "$r" '"connected":false'
+r=$(curl -s -b $CK $B/api/spotify/connect)
+chk "spotify connect demo" "$r" '"ok":true'
+r=$(curl -s -b $CK $B/api/spotify)
+chk "spotify status connected" "$r" '"connected":true'
+r=$(curl -s -b $CK $B/api/spotify/playlists)
+chk "spotify list playlists" "$r" 'Afrobeats Heat'
+r=$(curl -s -b $CK $B/api/spotify/playlists/demo-pl-afrobeats-hit)
+chk "spotify playlist detail with name" "$r" '"name":"Afrobeats Heat"'
+r=$(curl -s -b $CK -X POST $B/api/spotify/playlists/demo-pl-afrobeats-hit/download)
+chk "spotify download playlist" "$r" '"downloaded":8'
+r=$(curl -s -b $CK $B/api/spotify/downloads)
+chk "spotify list downloads" "$r" 'burna-boy-last-last'
+r=$(curl -s -b $CK -X DELETE $B/api/spotify/downloads/demo%3Aburna-boy-last-last)
+chk "spotify remove download" "$r" '"ok":true'
+r=$(curl -s -b $CK -X POST $B/api/spotify/disconnect)
+chk "spotify disconnect" "$r" '"connected":false'
+
 echo "== DELETE + LOGOUT =="
 r=$(curl -s -b $CK -X DELETE $B/api/shares/$SID)
 chk "delete share" "$r" '"ok":true'
